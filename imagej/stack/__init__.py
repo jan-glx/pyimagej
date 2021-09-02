@@ -109,6 +109,7 @@ def extract_channel(stack, channel_number: int):
         extract = stack[:,channel_temp,:,:]
         extract = extract.expand_dims('Channel') # re-attach the Channel coordinate with the Channel dimension
         extract = extract.rename("Channel " + str(channel_number))
+        extract = extract.transpose('Time', 'Channel', 'y' ,'x')
         return extract
     elif len(stack.dims) == 3: # ('y', 'x', 'Channel')
         extract = stack[:,:,channel_temp]
