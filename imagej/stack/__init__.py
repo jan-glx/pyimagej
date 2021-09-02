@@ -12,9 +12,24 @@ def combine_channels(channel_1, channel_2):
 
     return combined_img
 
+def concatenate_frames(frame_1, frame_2):
+    """
+    Concatenate two xarray.DataArrays along the 'Time' dimension.
+    :param frame_1: The first xarray.DataArray to concatenate.
+    :param frame_2: The second xarray.DataArray to concatenate.
+    """
+    if len(frame_1.dims) == 4 and len(frame_2.dims) == 4:
+        concatenated_frames = xr.concat([frame_1, frame_2], dim='Time')
+        return concatenated_frames.rename('concatenated')
+    else:
+        print(f"No time dimension found.\nframe_1: {frame_1.coords}\nframe_2: {frame_2.coords}")
+    
+
 def delete_channel(stack, channel_number: int):
     """
     Delete a specified channel from a stack.
+    :param stack: Input stack.
+    :param channel_number: Channel number to delete.
     """
     channel_temp = channel_number - 1
 
@@ -39,6 +54,20 @@ def delete_channel(stack, channel_number: int):
     else:
         print(f"No channels found: {stack.dims}")
 
+def delete_frames(stack, first_frame:int, last_frame:int, step=1):
+    """
+    Delete frames in the specified range
+    """
+    first_frame_temp = first_frame - 1
+
+    if len(stack.dims) == 4 and 'Time' in stack.coords:
+        extract_1 = stack[:first_frame_temp:step,:,:,:]
+        extract_2 = stack[last_frame::step,:,:,:]
+        concatenated_extract = concatenate_frames(extract_1, extract_2)
+        return concatenated_extract
+    else:
+        print(f"No time dimension found: {stack.dims}")
+
 def extract_frames(stack, first_frame:int, last_frame:int, step=1):
     """
     Extract a specified frame range (first and last frame values are kept).
@@ -53,7 +82,7 @@ def extract_frames(stack, first_frame:int, last_frame:int, step=1):
         extract = stack[first_frame_temp:last_frame:step,:,:,:]
         return extract
     else:
-        print(f"No channels found: {stack.dims}")
+        print(f"No time dimension found: {stack.dims}")
 
 def extract_channel(stack, channel_number: int):
     """
