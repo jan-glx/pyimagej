@@ -16,15 +16,22 @@ def delete_channel(stack, channel_number: int):
     """
     Delete a specified channel from a stack.
     """
-    if len(stack.dims) == 4:
-        # TODO: Logic for 4D data
-        return None
-    elif len(stack.dims) == 3:
+    channel_temp = channel_number - 1
+
+    if len(stack.dims) == 4: # ('Time', 'Channel',  'y', 'x')
+        if channel_number == 1:
+            extract = stack[:,1:,:,:]
+            return extract
+        else:
+            extract_1 = stack[:,:channel_temp,:,:]
+            extract_2 = stack[:,channel_temp + 1:,:,:]
+            combined_extract = combine_channels(extract_1, extract_2)
+            return combined_extract
+    elif len(stack.dims) == 3: # ('y', 'x', 'Channel')
         if channel_number == 1:
             extract = stack[:,:,1:]
             return extract
         else:
-            channel_temp = channel_number - 1
             extract_1 = stack[:,:,:channel_temp]
             extract_2 = stack[:,:,channel_temp + 1:]
             combined_extract = combine_channels(extract_1, extract_2)
@@ -39,12 +46,12 @@ def extract_channel(stack, channel_number: int):
     """
     channel_temp = channel_number - 1
 
-    if len(stack.dims) == 4:
+    if len(stack.dims) == 4: # ('Time', 'Channel',  'y', 'x')
         extract = stack[:,channel_temp,:,:]
         extract = extract.expand_dims('Channel') # re-attach the Channel coordinate with the Channel dimension
         extract = extract.rename("Channel " + str(channel_number))
         print(f"Extracted channel {str(channel_number)}.")
-    elif len(stack.dims) == 3:
+    elif len(stack.dims) == 3: # ('y', 'x', 'Channel')
         extract = stack[:,:,channel_temp]
         extract = extract.expand_dims('Channel') # re-attach the Channel coordinate with the Channel dimension
         extract = extract.rename("Channel " + str(channel_number))
