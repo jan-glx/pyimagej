@@ -12,6 +12,24 @@ def combine_channels(channel_1, channel_2):
 
     return combined_img
 
+def delete_channel(stack, channel_number: int):
+    """
+    Delete a specified channel from a stack.
+    """
+    if len(stack.dims) == 4:
+        # TODO: Logic for 4D data
+        return None
+    elif len(stack.dims) == 3:
+        if channel_number == 1:
+            extract = stack[:,:,1:]
+            return extract
+        else:
+            channel_temp = channel_number - 1
+            extract_1 = stack[:,:,:channel_temp]
+            extract_2 = stack[:,:,channel_temp + 1:]
+            combined_extract = combine_channels(extract_1, extract_2)
+            return combined_extract
+
 def extract_channel(stack, channel_number: int):
     """
     Extract a specified channel from a stack.
