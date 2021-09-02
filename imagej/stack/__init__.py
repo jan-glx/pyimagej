@@ -54,7 +54,7 @@ def delete_channel(stack, channel_number: int):
 
 def delete_frames(stack, first_frame:int, last_frame:int, step=1):
     """
-    Delete frames in the specified range
+    Delete frames in the specified range.
     """
     first_frame_temp = first_frame - 1
 
@@ -63,6 +63,20 @@ def delete_frames(stack, first_frame:int, last_frame:int, step=1):
         extract_2 = stack[last_frame::step,:,:,:]
         concatenated_extract = concatenate_frames(extract_1, extract_2)
         return concatenated_extract
+    else:
+        print(f"No time dimension found: {stack.dims}")
+
+def extract_frame(stack, frame_number):
+    """
+    Extract a single frame from a stack.
+    :param stack: Input stack.
+    :param frame_number: The number to extract.
+    """
+    frame_number_temp = frame_number - 1
+
+    if len(stack.dims) == 4 and 'Time' in stack.coords:
+        extract = stack[frame_number_temp:frame_number,:,:,:]
+        return extract
     else:
         print(f"No time dimension found: {stack.dims}")
 
