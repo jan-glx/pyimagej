@@ -36,6 +36,24 @@ def delete_channel(stack, channel_number: int):
             extract_2 = stack[:,:,channel_temp + 1:]
             combined_extract = combine_channels(extract_1, extract_2)
             return combined_extract
+    else:
+        print(f"No channels found: {stack.dims}")
+
+def extract_frames(stack, first_frame:int, last_frame:int, step=1):
+    """
+    Extract a specified frame range (first and last frame values are kept).
+    :param stack: Input stack.
+    :param first_frame: First frame of range to extract.
+    :param last_frame: Last frame of range to extract.
+    :param step: Step pattern of frame range to extract.
+    """
+    first_frame_temp = first_frame - 1
+
+    if len(stack.dims) == 4 and 'Time' in stack.coords:
+        extract = stack[first_frame_temp:last_frame:step,:,:,:]
+        return extract
+    else:
+        print(f"No channels found: {stack.dims}")
 
 def extract_channel(stack, channel_number: int):
     """
@@ -50,13 +68,12 @@ def extract_channel(stack, channel_number: int):
         extract = stack[:,channel_temp,:,:]
         extract = extract.expand_dims('Channel') # re-attach the Channel coordinate with the Channel dimension
         extract = extract.rename("Channel " + str(channel_number))
-        print(f"Extracted channel {str(channel_number)}.")
+        return extract
     elif len(stack.dims) == 3: # ('y', 'x', 'Channel')
         extract = stack[:,:,channel_temp]
         extract = extract.expand_dims('Channel') # re-attach the Channel coordinate with the Channel dimension
         extract = extract.rename("Channel " + str(channel_number))
         extract = extract.transpose('y', 'x', 'Channel')
+        return extract
     else:
         print(f"No channels found: {stack.dims}")
-
-    return extract
