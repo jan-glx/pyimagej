@@ -8,9 +8,7 @@ def combine_channels(channel_1, channel_2):
     :return: Combined channels as new xarray.DataArray.
     """
     combined_img = xr.concat([channel_1, channel_2], dim='Channel')
-    combined_img = combined_img.rename('merged')
-
-    return combined_img
+    return combined_img.rename('merged')
 
 def concatenate_frames(frame_1, frame_2):
     """
