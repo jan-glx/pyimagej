@@ -55,6 +55,10 @@ def delete_channel(stack, channel_number: int):
 def delete_frames(stack, first_frame:int, last_frame:int, step=1):
     """
     Delete frames in the specified range.
+    :param stack: Input stack.
+    :param first_frame: First frame number in range to delete.
+    :param last_frame: Last frame number in range to delete.
+    :param step: Step pattern to delete frames in defined range, default = 1.
     """
     first_frame_temp = first_frame - 1
 
