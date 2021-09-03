@@ -16,11 +16,11 @@ def concatenate_frames(frame_1, frame_2) -> xr.DataArray:
     :param frame_1: The first xarray.DataArray to concatenate.
     :param frame_2: The second xarray.DataArray to concatenate.
     """
-    if len(frame_1.dims) == 4 and len(frame_2.dims) == 4:
+    if 'Time' in frame_1.coords and 'Time' in frame_2.coords:
         concatenated_frames = xr.concat([frame_1, frame_2], dim='Time')
         return concatenated_frames.rename('concatenated')
     else:
-        print(f"No time dimension found.\nframe_1: {frame_1.coords}\nframe_2: {frame_2.coords}")
+        print(f"No time dimension found.\nframe_1: {frame_1.coords}\nframe_2: {frame_2.coords}\n Check the order of dimensions.")
     
 def delete_channel(stack, channel_number: int) -> xr.DataArray:
     """
