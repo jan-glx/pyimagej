@@ -52,7 +52,24 @@ def delete_channel(stack, channel_number: int):
     else:
         print(f"No channels found: {stack.dims}")
 
-def delete_frames(stack, first_frame:int, last_frame:int, step=1):
+def delete_frame(stack, frame_number: int) -> xr.DataArray:
+    """
+    Delete a single frame from a stack.
+    :param stack: Input stack.
+    :param frame_number: Frame number to delete from stack.
+    """
+    frame_number_temp = frame_number - 1
+
+    if 'Time' in stack.coords:
+        extract_1 = stack[:frame_number_temp]
+        extract_2 = stack[frame_number:]
+        concatenated_extract = concatenate_frames(extract_1, extract_2)
+        return concatenated_extract
+    else:
+        print(f"No time dimension found: {stack.dims}. Check the order of dimensions.")
+    return
+
+def delete_frames(stack, first_frame: int, last_frame: int, step=1):
     """
     Delete frames in the specified range.
     :param stack: Input stack.
@@ -70,7 +87,7 @@ def delete_frames(stack, first_frame:int, last_frame:int, step=1):
     else:
         print(f"No time dimension found: {stack.dims}")
 
-def extract_frame(stack, frame_number):
+def extract_frame(stack, frame_number: int):
     """
     Extract a single frame from a stack.
     :param stack: Input stack.
@@ -84,7 +101,7 @@ def extract_frame(stack, frame_number):
     else:
         print(f"No time dimension found: {stack.dims}")
 
-def extract_frames(stack, first_frame:int, last_frame:int, step=1):
+def extract_frames(stack, first_frame: int, last_frame: int, step=1):
     """
     Extract a specified frame range (first and last frame values are kept).
     :param stack: Input stack.
