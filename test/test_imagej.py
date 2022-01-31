@@ -224,3 +224,11 @@ class TestIJ1ToIJ2Synchronization(object):
             ij_fixture.py.synchronize_ij1_to_ij2(None)
         with pytest.raises(ImportError):
             ij_fixture.py.active_image_plus()
+
+class TestRealTypeConversion(object):
+    def test_double_type_to_double(self, ij_fixture):
+        DoubleType = sj.jimport('net.imglib2.type.numeric.real.DoubleType')
+        original = DoubleType(1)
+        expected = np.float64(1)
+        actual = ij_fixture.py.from_java(original)
+        assert expected == actual
