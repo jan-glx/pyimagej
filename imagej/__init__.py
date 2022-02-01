@@ -33,7 +33,9 @@ import os
 import re
 import sys
 import time
+from typing import List
 
+from labeling import Labeling
 import imglyb
 import numpy as np
 import scyjava as sj
@@ -298,6 +300,9 @@ def _create_jvm(ij_dir_or_version_or_endpoint=None, mode=Mode.HEADLESS, add_lega
 
     if add_legacy:
         sj.config.endpoints.append('net.imagej:imagej-legacy:MANAGED')
+    
+    # Add additional ImageJ endpoints specific to PyImageJ
+    sj.config.endpoints.append('net.imglib2:labeling:0.2.2')
 
     # Restore any pre-existing endpoints, after ImageJ's
     sj.config.endpoints.extend(original_endpoints)
@@ -352,6 +357,9 @@ def _create_gateway():
     Img                      = sj.jimport('net.imglib2.img.Img')
     ImgView                  = sj.jimport('net.imglib2.img.ImgView')
     RandomAccessibleInterval = sj.jimport('net.imglib2.RandomAccessibleInterval')
+    ImgLabeling              = sj.jimport('net.imglib2.roi.labeling.ImgLabeling')
+    Axes                     = sj.jimport('net.imagej.axis.Axes')
+    Double                   = sj.jimport('java.lang.Double')
 
     try:
         ImagePlus = sj.jimport('ij.ImagePlus')
@@ -362,6 +370,7 @@ def _create_gateway():
     class ImageJPython:
         def __init__(self, ij):
             self._ij = ij
+            self._add_converters()
 
         def dims(self, image):
             """
@@ -529,6 +538,10 @@ def _create_gateway():
 
             return numpy_array
 
+        def rai_to_numpy_permuted(self, rai: RandomAccessibleInterval):
+            numpy_result = self.initialize_numpy_image(rai)
+            return self.rai_to_numpy(rai, numpy_result)
+
         def run_plugin(self, plugin, args=None, ij1_style=True):
             """Run an ImageJ plugin.
 
@@ -642,10 +655,6 @@ def _create_gateway():
             :param data: Python object to be converted into its respective Java counterpart.
             :return: A Java object convrted from Python.
             """
-            if self._is_memoryarraylike(data):
-                return self.to_img(data)
-            if self._is_xarraylike(data):
-                return self.to_dataset(data)
             return sj.to_java(data)
 
         def to_dataset(self, data):
@@ -806,25 +815,6 @@ def _create_gateway():
             :return: A Python object convrted from Java.
             """
             # todo: convert a dataset to xarray
-            if not sj.isjava(data): return data
-            try:
-                if ImagePlus and isinstance(data, ImagePlus):
-                    data = self._imageplus_to_imgplus(data)
-                if self._ij.convert().supports(data, ImgPlus):
-                    if dims._has_axis(data):
-                        # HACK: Converter exists for ImagePlus -> Dataset, but not ImagePlus -> RAI.
-                        data = self._ij.convert().convert(data, ImgPlus)
-                        permuted_rai = self._permute_rai_to_python(data)
-                        numpy_result = self.initialize_numpy_image(permuted_rai)
-                        numpy_result = self.rai_to_numpy(permuted_rai, numpy_result)
-                        return self._dataset_to_xarray(permuted_rai,numpy_result)
-                if self._ij.convert().supports(data, RandomAccessibleInterval):
-                    rai = self._ij.convert().convert(data, RandomAccessibleInterval)
-                    numpy_result = self.initialize_numpy_image(rai)
-                    return self.rai_to_numpy(rai, numpy_result)
-            except Exception as exc:
-                _dump_exception(exc)
-                raise exc
             return sj.to_python(data)
 
 
@@ -848,6 +838,22 @@ def _create_gateway():
             xr_dims = dims._convert_dims(xr_dims, direction='python')
             xr_coords = dims._get_axes_coords(xr_axes, xr_dims, numpy_array.shape)
             return xr.DataArray(numpy_array, dims=xr_dims, coords=xr_coords, attrs=xr_attrs)
+
+        def _dataset_to_xarray_permuted(self, rai: RandomAccessibleInterval):
+            """Wrap a numpy array with xarray and axes metadata from a RandomAccessibleInterval.
+
+            Wraps a numpy array with the metadata from the source RandomAccessibleInterval
+            metadata (i.e. axes). Also permutes the dimension of the rai to conform to
+            numpy's standards
+
+            :param permuted_rai: A RandomAccessibleInterval with axes (e.g. Dataset or ImgPlus).
+            :return: xarray.DataArray with metadata/axes.
+            """
+            data = self._ij.convert().convert(rai, ImgPlus)
+            permuted_rai = self._permute_rai_to_python(data)
+            numpy_result = self.initialize_numpy_image(permuted_rai)
+            numpy_result = self.rai_to_numpy(permuted_rai, numpy_result)
+            return self._dataset_to_xarray(permuted_rai, numpy_result)
 
         
         def _permute_rai_to_python(self, rai: RandomAccessibleInterval) -> RandomAccessibleInterval:
@@ -897,6 +903,66 @@ def _create_gateway():
             reverse_cut.append(lst[-1])
             return reverse_cut
 
+        def _delete_labeling_files(self, filepath):
+            """
+            Removes any Labeling data left over at filepath
+            :param filepath: the filepath where Labeling (might have) saved data
+            """
+            pth_bson = filepath + '.bson'
+            pth_tif = filepath + '.tif'
+            if os.path.exists(pth_tif):
+                os.remove(pth_tif)
+            if os.path.exists(pth_bson):
+                os.remove(pth_bson)
+
+        def _imglabeling_to_labeling(self, data):
+            """
+            Converts an ImgLabeling to an equivalent Python Labeling
+            :param data: the data
+            :return: a Labeling
+            """
+            LabelingIOService = sj.jimport('net.imglib2.labeling.LabelingIOService')
+            labels = self._ij.context().getService(LabelingIOService)
+
+            # Save the image on the java side
+            tmp_pth = os.getcwd() + '/tmp'
+            tmp_pth_bson = tmp_pth + '.bson'
+            tmp_pth_tif = tmp_pth + '.tif'
+            try:
+                self._delete_labeling_files(tmp_pth)
+                data = self._ij.convert().convert(data, ImgLabeling)
+                labels.save(data, tmp_pth_tif) # TODO: improve, likely utilizing the data's name
+            except JException:
+                print('Failed to save the data')
+            
+            # Load the labeling on the python side
+            labeling = Labeling.from_file(tmp_pth_bson)
+            self._delete_labeling_files(tmp_pth)
+            return labeling
+
+        def _labeling_to_imglabeling(self, data):
+            """
+            Converts a python Labeling to an equivalent ImgLabeling
+            :param data: the data
+            :return: an ImgLabeling
+            """
+            LabelingIOService = sj.jimport('net.imglib2.labeling.LabelingIOService')
+            labels = self._ij.context().getService(LabelingIOService)
+
+            # Save the image on the python side
+            tmp_pth = './tmp'
+            self._delete_labeling_files(tmp_pth)
+            data.save_result(tmp_pth)
+            
+            # Load the labeling on the python side
+            try:
+                tmp_pth_bson = tmp_pth + '.bson'
+                labeling = labels.load(tmp_pth_bson)
+            except JException as exc:
+                self._delete_labeling_files(tmp_pth)
+                raise exc
+
+            return labeling
 
         def show(self, image, cmap=None):
             """Display a Java or Python 2D image.
@@ -1052,6 +1118,76 @@ def _create_gateway():
             stack = imp.getStack()
             pixels = imp.getProcessor().getPixels()
             stack.setPixels(pixels, imp.getCurrentSlice())
+
+
+        def _imagej_java_converters(self) -> List[sj.Converter]:
+            """Gets all Python --> ImgLib2 Converters"""
+            return [
+                sj.Converter(
+                    predicate=lambda obj: isinstance(obj, Labeling),
+                    converter=self._labeling_to_imglabeling,
+                    priority=sj.Priority.HIGH + 1
+                ),
+                sj.Converter(
+                    predicate=self._is_memoryarraylike,
+                    converter=self.to_img,
+                    priority=sj.Priority.HIGH
+                ),
+                sj.Converter(
+                    predicate=self._is_xarraylike,
+                    converter=self.to_dataset,
+                    priority=sj.Priority.HIGH + 1
+                ),
+            ]
+
+
+        def _can_convert_rai(self, obj) -> bool:
+            """Return false unless conversion to RAI is possible."""
+            try:
+                return self._ij.convert().supports(obj, RandomAccessibleInterval)
+            except Exception:
+                return False
+
+        def _can_convert_imgPlus(self, obj) -> bool:
+            """Return false unless conversion to RAI is possible."""
+            try:
+                can_convert = self._ij.convert().supports(obj, ImgPlus)
+                has_axis = dims._has_axis(obj)
+                return can_convert and has_axis
+            except Exception:
+                return False
+
+        def _imagej_py_converters(self) -> List[sj.Converter]:
+            """Gets all ImgLib2 --> Python Converters"""
+            return [
+                sj.Converter(
+                    predicate=lambda obj: isinstance(obj, ImgLabeling),
+                    converter=self._imglabeling_to_labeling,
+                    priority=sj.Priority.HIGH
+                ),
+                sj.Converter(
+                    predicate=lambda obj: ImagePlus and isinstance(obj, ImagePlus),
+                    converter=lambda obj: self.from_java(self._imageplus_to_imgplus(obj)),
+                    priority=sj.Priority.HIGH + 2
+                ),
+                sj.Converter(
+                    predicate=self._can_convert_imgPlus,
+                    converter=lambda obj: self._dataset_to_xarray_permuted(self._ij.convert().convert(obj, ImgPlus)),
+                    priority=sj.Priority.HIGH
+                ),
+                sj.Converter(
+                    predicate=self._can_convert_rai,
+                    converter=lambda obj: self.rai_to_numpy_permuted(self._ij.convert().convert(obj, RandomAccessibleInterval)),
+                    priority=sj.Priority.HIGH - 2
+                )
+            ]
+
+
+        def _add_converters(self):
+            """Add all known converters to ScyJava's conversion mechanism."""
+            [sj.add_java_converter(c) for c in self._imagej_java_converters()]
+            [sj.add_py_converter(c) for c in self._imagej_py_converters()]
+
 
     # attach ImageJPython to imagej
     imagejPythonObj = ImageJPython(ij)
