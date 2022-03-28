@@ -10,6 +10,9 @@ on:
     branches:
       - master
 
+env:
+  CONDA_DLL_SEARCH_MODIFICATION_ENABLE: 1
+
 jobs:
   build-cross-platform:
     runs-on: ${{ matrix.os }}

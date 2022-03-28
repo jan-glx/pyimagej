@@ -17,7 +17,4 @@ dependencies:
   - scikit-image
   - scyjava
   - xarray
-    # TEMP: Remove once labeling is published on conda-forge
-  - pip
-  - pip:
-    - labeling
+  - labeling
