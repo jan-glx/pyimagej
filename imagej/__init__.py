@@ -642,6 +642,7 @@ def _create_gateway():
             :param data: Python object to be converted into its respective Java counterpart.
             :return: A Java object convrted from Python.
             """
+            sj.set_local('ij', self)
             if self._is_memoryarraylike(data):
                 return self.to_img(data)
             if self._is_xarraylike(data):
@@ -805,6 +806,7 @@ def _create_gateway():
             :param data: Java object to be converted into its respective Python counterpart.
             :return: A Python object convrted from Java.
             """
+            sj.set_local('ij', self)
             # todo: convert a dataset to xarray
             if not sj.isjava(data): return data
             try:
