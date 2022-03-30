@@ -952,7 +952,7 @@ def _create_gateway():
             # Save the image on the python side
             tmp_pth = './tmp'
             self._delete_labeling_files(tmp_pth)
-            data.save_result(tmp_pth)
+            data.save_result(path=tmp_pth, cleanup=True)
             
             # Load the labeling on the python side
             try:

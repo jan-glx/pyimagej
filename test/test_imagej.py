@@ -608,8 +608,8 @@ class TestImgLabelingConversions(object):
         # Convert
         p_convert = ij_fixture.py.from_java(java_labeling)
         # Assert indexImg equality
-        exp_img, exp_labels = py_labeling.get_result()
-        act_img, act_labels = p_convert.get_result()
+        exp_img, exp_labels = py_labeling.get_result(cleanup=True)
+        act_img, act_labels = p_convert.get_result(cleanup=True)
         assert np.array_equal(exp_img, act_img)
         # Assert (APPLICABLE) metadata equality
         # Skipping numSources - ImgLabeling doesn't have this
@@ -621,8 +621,8 @@ class TestImgLabelingConversions(object):
         to_java = ij_fixture.py.to_java(py_labeling)
         back_to_py = ij_fixture.py.from_java(to_java)
         # Assert indexImg equality
-        exp_img, exp_labels = py_labeling.get_result()
-        act_img, act_labels = back_to_py.get_result()
+        exp_img, exp_labels = py_labeling.get_result(cleanup=True)
+        act_img, act_labels = back_to_py.get_result(cleanup=True)
         assert np.array_equal(exp_img, act_img)
         # Assert (APPLICABLE) metadata equality
         # Skipping numSources - ImgLabeling doesn't have this
