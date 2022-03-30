@@ -908,7 +908,7 @@ def _create_gateway():
             Removes any Labeling data left over at filepath
             :param filepath: the filepath where Labeling (might have) saved data
             """
-            pth_bson = filepath + '.bson'
+            pth_bson = filepath + '.labeling.bson'
             pth_tif = filepath + '.tif'
             if os.path.exists(pth_tif):
                 os.remove(pth_tif)
@@ -926,7 +926,7 @@ def _create_gateway():
 
             # Save the image on the java side
             tmp_pth = os.getcwd() + '/tmp'
-            tmp_pth_bson = tmp_pth + '.bson'
+            tmp_pth_bson = tmp_pth + '.labeling.bson'
             tmp_pth_tif = tmp_pth + '.tif'
             try:
                 self._delete_labeling_files(tmp_pth)
@@ -956,7 +956,7 @@ def _create_gateway():
             
             # Load the labeling on the python side
             try:
-                tmp_pth_bson = tmp_pth + '.bson'
+                tmp_pth_bson = tmp_pth + '.labeling.bson'
                 labeling = labels.load(tmp_pth_bson)
             except JException as exc:
                 self._delete_labeling_files(tmp_pth)
