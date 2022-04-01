@@ -1164,7 +1164,6 @@ def _create_gateway():
 """)
         return False
 
-    global ij
     ij = ImageJ()
 
     # Overload operators for RandomAccessibleInterval so it's more Pythonic.
