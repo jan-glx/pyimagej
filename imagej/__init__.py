@@ -1349,6 +1349,7 @@ def _create_gateway():
 """)
         return False
 
+    global ij
     ij = ImageJ()
 
     # Forward stdout and stderr from Java to Python.
