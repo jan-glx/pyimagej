@@ -54,12 +54,20 @@ If the debugging output includes notices such as:
 DEBUG:jgo: [ERROR] Non-resolvable import POM: Could not transfer artifact net.imglib2:imglib2-imglyb:pom:1.0.1 from/to scijava.public (https://maven.scijava.org/content/groups/public): Transfer failed for https://maven.scijava.org/content/groups/public/net/imglib2/imglib2-imglyb/1.0.1/imglib2-imglyb-1.0.1.pom @ line 8, column 29: Connect to maven.scijava.org:443 [maven.scijava.org/144.92.48.199] failed: Connection timed out:
 ```
 This suggests you may be behind a firewall that is preventing Maven from downloading the necessary components. In this case you have a few options to try:
-1. Configure your proxy settings directly in your python code (replacing `myproxy.domain` and port `8080` as appropriate)
+1. Configure your proxy settings directly in your python code
    ```
    import scyjava
+   import imagej
+   
+   ij = imagej.init() # it is crutial to run this before importing "java.lang.System" such that pyimagej (and not scyjava alone) initializes the JVM
    System = scyjava.jimport('java.lang.System')
-   mydomain = "myproxy.domain"
-   myport = "8080"
+   
+   # instruct the JVM to use the sytem proxy:
+   System.setProperty("java.net.useSystemProxies", "true");
+   
+   # *alternatively*, manually configure a different proxy:
+   mydomain = "myproxy.domain" # replace by your actual proxy
+   myport = "8080" # replace by your proxy's actual port, e.g. 80
    System.setProperty("http.proxyHost", mydomain)
    System.setProperty("http.proxyPort", myport)
    System.setProperty("https.proxyHost", mydomain)
